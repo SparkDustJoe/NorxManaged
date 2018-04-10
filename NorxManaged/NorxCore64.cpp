@@ -4,7 +4,7 @@ using namespace System::Runtime::InteropServices;
 
 #ifndef NORX_NORX_CORE64
 #define NORX_NORX_CORE64
-#include <stdlib.h>
+#include <stdlib.h> // only needed for _rotr64 and _lotr
 
 namespace NorxManaged
 {
@@ -25,7 +25,7 @@ namespace NorxManaged
 #define NORX64_TAGWORDS		4
 #define ROTR64(x, y) _rotr64(x, y)
 
-		// The nonlinear primitive 
+// The nonlinear primitive 
 #define _H(A, B) ( A ^ B ^ (( (A) & (B) ) << 1) )
 
 // The quarter-round 
@@ -36,7 +36,8 @@ namespace NorxManaged
     (A) = _H(A, B); (D) ^= (A); (D) = ROTR64((D), 40); \
     (C) = _H(C, D); (B) ^= (C); (B) = ROTR64((B), 63); \
 }
-	//These BURN methods should survive compiler optimization, they are only used at the end of a processes
+		//These BURN methods should survive compiler optimization, they are only used at the end of a process
+		//Just in case, reference the source array in the calling function in some meaningful way to keep the references alive before the garbage collecter gets them
 		static __inline void _burn(array<UInt64>^ thing)
 		{
 			for (Byte i = 0; i < thing->Length; i++)
@@ -58,6 +59,7 @@ namespace NorxManaged
 
 		static __inline void _F(array<UInt64>^ state, const Byte rounds)
 		{
+			// normally this would be unrolled for performance, but with variable round amounts, that would be tedious to implement
 			for (Byte i = 0; i < rounds; i++)
 			{
 				// Column step 
@@ -129,12 +131,13 @@ namespace NorxManaged
 					state[j] ^= state_buffer[j];
 				};
 				_burn(state_buffer);
+				state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 			}
 		}
 
 		static void _encrypt_p1(array<UInt64>^ state, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, array<Byte>^ out)
 		{
-			// Used only for Payload of Parallelism > 1 (not P=0)
+			// Used only for Payload of Parallelism = 1 (not P=0)
 			if (in->LongLength == 0) return;
 			Int64 outptr = 0;
 			array<UInt64>^ state_buffer = gcnew array<UInt64>(NORX64_RATEWORDS);
@@ -169,26 +172,28 @@ namespace NorxManaged
 
 			}
 			_burn(state_buffer);
+			state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 		}
 
-		static void _decrypt_p1(array<UInt64>^ state, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, array<Byte>^ out)
+		static void _decrypt_p1(array<UInt64>^ state, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, int tagBytesInMessage, array<Byte>^% out)
 		{
-			// Used only for Payload of Parallelism > 1 (not P=0)
+			// Used only for Payload of Parallelism = 1 (not P=0)
 			if (in->LongLength == 0) return;
 			Int64 outptr = 0;
+			Int64 actualLength = in->LongLength - tagBytesInMessage;
 			array<UInt64>^ state_buffer = gcnew array<UInt64>(NORX64_RATEWORDS);
-			for (Int64 i = 0; i < in->LongLength; i += NORX64_RATEBYTES)
+			for (Int64 i = 0; i < actualLength; i += NORX64_RATEBYTES)
 			{
-				bool last = i + NORX64_RATEBYTES >= in->LongLength;
+				bool last = i + NORX64_RATEBYTES >= actualLength;
 				state[15] ^= (UInt64)tag;
 				_F(state, rounds);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX64_RATEBYTES);
 					Buffer::BlockCopy(state, 0, LastBlock, 0, NORX64_RATEBYTES); // !!store state in last block, then overwrite with ciphertext
-					if (i < in->LongLength)
-						Buffer::BlockCopy(in, i, LastBlock, 0, in->LongLength % NORX64_RATEBYTES);
-					LastBlock[in->LongLength % NORX64_RATEBYTES] ^= 0x01; // remove the padding
+					if (i < actualLength)
+						Buffer::BlockCopy(in, i, LastBlock, 0, actualLength % NORX64_RATEBYTES);
+					LastBlock[actualLength % NORX64_RATEBYTES] ^= 0x01; // remove the padding
 					LastBlock[LastBlock->Length - 1] ^= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX64_RATEBYTES);
 				}
@@ -203,15 +208,16 @@ namespace NorxManaged
 					state[j] = c;
 				};
 				if (last)
-					Buffer::BlockCopy(state_buffer, 0, out, outptr, in->LongLength % NORX64_RATEBYTES);
+					Buffer::BlockCopy(state_buffer, 0, out, outptr, actualLength % NORX64_RATEBYTES);
 				else
 					Buffer::BlockCopy(state_buffer, 0, out, outptr, NORX64_RATEBYTES);
 				outptr += NORX64_RATEBYTES;
 			}
 			_burn(state_buffer);
+			state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 		}
 
-		static void _encrypt_p2(array<array<UInt64>^>^ states, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, const Byte lanes, array<Byte>^ out)
+		static void _encrypt_p2(array<array<UInt64>^>^ states, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, const Byte lanes, array<Byte>^% out)
 		{
 			// Used only for Payload of Parallelism > 1 (not P=0)
 			if (in->LongLength == 0) return;
@@ -253,27 +259,29 @@ namespace NorxManaged
 				laneptr = ++laneptr % lanes;
 			}
 			_burn(state_buffer);
+			state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 		}
 
-		static void _decrypt_p2(array<array<UInt64>^>^ states, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, const Byte lanes, array<Byte>^ out)
+		static void _decrypt_p2(array<array<UInt64>^>^ states, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, const Byte lanes, int tagBytesInMessage, array<Byte>^% out)
 		{
 			// Used only for Payload of Parallelism > 1 (not P=0)
 			if (in->LongLength == 0) return;
 			Int64 outptr = 0;
+			Int64 actualLength = in->LongLength - tagBytesInMessage;
 			Byte laneptr = 0;
 			array<UInt64>^ state_buffer = gcnew array<UInt64>(NORX64_RATEWORDS);
-			for (Int64 i = 0; i < in->LongLength; i += NORX64_RATEBYTES)
+			for (Int64 i = 0; i < actualLength; i += NORX64_RATEBYTES)
 			{
-				bool last = i + NORX64_RATEBYTES >= in->LongLength;
+				bool last = i + NORX64_RATEBYTES >= actualLength;
 				states[laneptr][15] ^= (UInt64)tag;
 				_F(states[laneptr], rounds);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX64_RATEBYTES);
 					Buffer::BlockCopy(states[laneptr], 0, LastBlock, 0, NORX64_RATEBYTES); // !!store state in last block, then overwrite with ciphertext
-					if (i < in->LongLength)
-						Buffer::BlockCopy(in, i, LastBlock, 0, in->LongLength % NORX64_RATEBYTES);
-					LastBlock[in->LongLength % NORX64_RATEBYTES] ^= 0x01;
+					if (i < actualLength)
+						Buffer::BlockCopy(in, i, LastBlock, 0, actualLength % NORX64_RATEBYTES);
+					LastBlock[actualLength % NORX64_RATEBYTES] ^= 0x01;
 					LastBlock[LastBlock->Length - 1] ^= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, LastBlock->Length);
 				}
@@ -289,13 +297,14 @@ namespace NorxManaged
 					states[laneptr][j] = c;
 				};
 				if (last)
-					Buffer::BlockCopy(state_buffer, 0, out, outptr, in->LongLength % NORX64_RATEBYTES);
+					Buffer::BlockCopy(state_buffer, 0, out, outptr, actualLength % NORX64_RATEBYTES);
 				else
 					Buffer::BlockCopy(state_buffer, 0, out, outptr, NORX64_RATEBYTES);
 				outptr += NORX64_RATEBYTES;
 				laneptr = ++laneptr % lanes;
 			}
 			_burn(state_buffer);
+			state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 		}
 
 		static __inline void _branch(array<UInt64>^ state, Byte lane, const Byte rounds)
@@ -318,7 +327,7 @@ namespace NorxManaged
 			}
 		}
 
-		static __inline void _finalize(array<UInt64>^ state, array<const UInt64>^ k, const Byte rounds, const short tagsizebits, array<Byte>^ out)
+		static __inline void _finalize(array<UInt64>^ state, array<const UInt64>^ k, const Byte rounds, const short tagsizebits, array<Byte>^% outTag)
 		{
 			state[15] ^= FINAL_TAG;
 
@@ -333,8 +342,9 @@ namespace NorxManaged
 			state[14] ^= k[2];
 			state[15] ^= k[3];
 
-			Buffer::BlockCopy(state, 12 * NORX64_WORDBYTES, out, 0, tagsizebits / 8);
+			Buffer::BlockCopy(state, NORX64_RATEWORDS * NORX64_WORDBYTES, outTag, 0, tagsizebits / 8); // extract Tag
 			_burn(state); // at this point we can burn the state 
+			state[0] ^= state[1] ^ NORX64_CAPBYTES;
 		}
 
 		// Verify tags in constant time: 0 for success, -1 for fail 

@@ -41,7 +41,7 @@ namespace NorxManaged
 	public ref class Norx64
 	{
 	public:		
-		static array<Byte>^ EncryptWithTag(
+		static int Encrypt(
 			array<const Byte>^ Header,
 			array<const Byte>^ Message,
 			array<const Byte>^ Footer,
@@ -50,8 +50,8 @@ namespace NorxManaged
 			const Byte Rounds,
 			const Byte Parallelism,
 			const short TagBitSize,
-			[Out] array<Byte>^% output_tag);
-		static array<Byte>^ DecryptAndVerifyTag(
+			[Out] array<Byte>^% output);
+		static int DecryptVerify(
 			array<const Byte>^ Header,
 			array<const Byte>^ Message,
 			array<const Byte>^ Footer,
@@ -59,13 +59,35 @@ namespace NorxManaged
 			array<const Byte>^ Nonce,
 			const Byte Rounds,
 			const Byte Parallelism,
-			array<const Byte>^ tag);
+			const short TagBitSize,
+			[Out] array<Byte>^% output);
+		static int Encrypt_Detached(
+			array<const Byte>^ Header,
+			array<const Byte>^ Message,
+			array<const Byte>^ Footer,
+			array<const Byte>^ Key,
+			array<const Byte>^ Nonce,
+			const Byte Rounds,
+			const Byte Parallelism,
+			const short TagBitSize,
+			[Out] array<Byte>^% output,
+			[Out] array<Byte>^% output_tag);
+		static int DecryptVerify_Detached(
+			array<const Byte>^ Header,
+			array<const Byte>^ Message,
+			array<const Byte>^ Footer,
+			array<const Byte>^ Key,
+			array<const Byte>^ Nonce,
+			const Byte Rounds,
+			const Byte Parallelism,
+			array<const Byte>^ tag,
+			[Out] array<Byte>^% output);
 	};
 
 	public ref class Norx32
 	{
 	public:
-		static array<Byte>^ EncryptWithTag(
+		static int Encrypt(
 			array<const Byte>^ Header,
 			array<const Byte>^ Message,
 			array<const Byte>^ Footer,
@@ -74,8 +96,8 @@ namespace NorxManaged
 			const Byte Rounds,
 			const Byte Parallelism,
 			const short TagBitSize,
-			[Out] array<Byte>^% output_tag);
-		static array<Byte>^ DecryptAndVerifyTag(
+			[Out] array<Byte>^% output);
+		static int DecryptVerify(
 			array<const Byte>^ Header,
 			array<const Byte>^ Message,
 			array<const Byte>^ Footer,
@@ -83,7 +105,29 @@ namespace NorxManaged
 			array<const Byte>^ Nonce,
 			const Byte Rounds,
 			const Byte Parallelism,
-			array<const Byte>^ tag);
+			const short TagBitSize,
+			[Out] array<Byte>^% output);
+		static int Encrypt_Detached(
+			array<const Byte>^ Header,
+			array<const Byte>^ Message,
+			array<const Byte>^ Footer,
+			array<const Byte>^ Key,
+			array<const Byte>^ Nonce,
+			const Byte Rounds,
+			const Byte Parallelism,
+			const short TagBitSize,
+			[Out] array<Byte>^% output,
+			[Out] array<Byte>^% output_tag);
+		static int DecryptVerify_Detached(
+			array<const Byte>^ Header,
+			array<const Byte>^ Message,
+			array<const Byte>^ Footer,
+			array<const Byte>^ Key,
+			array<const Byte>^ Nonce,
+			const Byte Rounds,
+			const Byte Parallelism,
+			array<const Byte>^ tag,
+			[Out] array<Byte>^% output);
 	};
 }
 

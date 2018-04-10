@@ -1,4 +1,6 @@
-﻿namespace NorxManaged
+﻿using System;
+
+namespace NorxManaged
 {
     public class TestCases
     {
@@ -146,6 +148,21 @@
                                             0x07, 0x67, 0x81, 0x48, 0x9A, 0xC7, 0x3A, 0x6B, 0xFB, 0x6A, 0xFE, 0x39, 0x6A, 0xE7, 0x9F, 0x97 },
                 ResultingTag = new byte[] { 0xB3, 0xB1, 0x1A, 0x8F, 0x9A, 0x94, 0xF1, 0xB1, 0xAC, 0x18, 0x53, 0xE9, 0x4C, 0x43, 0x26, 0x4A }
             };
+        }
+
+        static public string BytesToHexString(byte[] data)
+        {
+            if (data == null || data.Length == 0) return "";
+            return BitConverter.ToString(data).Replace("-", "").ToUpper();
+        }
+
+        static public byte[] HexStringToBytes(string data)
+        {
+            if (string.IsNullOrWhiteSpace(data)) return new byte[0];
+            byte[] result = new byte[data.Length / 2];
+            for (int i = 0; i < data.Length; i += 2)
+                result[i / 2] = byte.Parse(data.Substring(i, 2), System.Globalization.NumberStyles.HexNumber);
+            return result;
         }
     }
 }
