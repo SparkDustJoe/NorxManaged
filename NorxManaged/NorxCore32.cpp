@@ -105,7 +105,7 @@ namespace NorxManaged
 		static void _absorb(array<UInt32>^ state, array<const Byte>^ in, const _domain_separator tag, const Byte rounds)
 		{
 			// Used for P=1, and Header and Footer/Trailer (using appropriate domain separation constant)
-			if (in->LongLength == 0) return;
+			if (in == nullptr || in->LongLength == 0) return;
 			Int64 outptr = 0;
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
 			for (Int64 i = 0; i < in->LongLength; i += NORX32_RATEBYTES)
@@ -135,22 +135,32 @@ namespace NorxManaged
 			}
 		}
 
-		static void _encrypt_p1(array<UInt32>^ state, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, array<Byte>^ out)
+		static void _encrypt_p1(
+			array<UInt32>^ state, 
+			array<const Byte>^ in, int index, int length,
+			const _domain_separator tag, 
+			const Byte rounds, 
+			array<Byte>^ out, int outIndex) // the input and output length will be the same (the TAG is added in another step)
 		{
 			// Used only for Payload of Parallelism = 1 (not P=0)
-			if (in->LongLength == 0) return;
-			Int64 outptr = 0;
+			int apparentLength = index + length;
+			if (apparentLength > in->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p1->The given index and length goes beyond the bounds of the supplied input array.");
+			if (outIndex + length > out->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p1->The given index and length goes beyond the bounds of the supplied output array.");
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
+			Int64 outptr = outIndex;
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
-			for (Int64 i = 0; i < in->LongLength; i += NORX32_RATEBYTES)
+			for (Int64 i = index; i < apparentLength; i += NORX32_RATEBYTES)
 			{
-				bool last = i + NORX32_RATEBYTES >= in->LongLength;
+				bool last = i + NORX32_RATEBYTES >= apparentLength;
 				_burn(state_buffer);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX32_RATEBYTES);
-					if (i < in->LongLength)
-						Buffer::BlockCopy(in, i, LastBlock, 0, in->LongLength % NORX32_RATEBYTES);
-					LastBlock[in->LongLength % NORX32_RATEBYTES] = 0x01;
+					if (i < apparentLength)
+						Buffer::BlockCopy(in, i, LastBlock, 0, apparentLength % NORX32_RATEBYTES);
+					LastBlock[apparentLength % NORX32_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX32_RATEBYTES);
 				}
@@ -165,22 +175,32 @@ namespace NorxManaged
 					state[j] ^= state_buffer[j];
 				};
 				if (last)
-					Buffer::BlockCopy(state, 0, out, outptr, in->LongLength % NORX32_RATEBYTES);
+					Buffer::BlockCopy(state, 0, out, outptr, apparentLength % NORX32_RATEBYTES);
 				else
 					Buffer::BlockCopy(state, 0, out, outptr, NORX32_RATEBYTES);
 				outptr += NORX32_RATEBYTES;
-
 			}
 			_burn(state_buffer);
 			state_buffer[0] ^= state_buffer[1] ^ NORX32_CAPBYTES;
 		}
 
-		static void _decrypt_p1(array<UInt32>^ state, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, int tagBytesInMessage, array<Byte>^% out)
+		static void _decrypt_p1(
+			array<UInt32>^ state,
+			array<const Byte>^ in, int index, int length, 
+			const _domain_separator tag, 
+			const Byte rounds, 
+			int tagBytesInMessage, 
+			array<Byte>^% out, int outIndex)
 		{
 			// Used only for Payload of Parallelism = 1 (not P=0)
-			if (in->LongLength == 0) return;
-			Int64 outptr = 0;
-			Int64 actualLength = in->LongLength - tagBytesInMessage;
+			int apparentLength = index + length;
+			if (apparentLength > in->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p1->The given index and length goes beyond the bounds of the supplied input array.");
+			if (outIndex + length - tagBytesInMessage > out->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p1->The given index and length goes beyond the bounds of the supplied output array.");
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
+			Int64 outptr = outIndex;
+			Int64 actualLength = apparentLength - tagBytesInMessage; // the tag is processed in another step
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
 			for (Int64 i = 0; i < actualLength; i += NORX32_RATEBYTES)
 			{
@@ -217,23 +237,34 @@ namespace NorxManaged
 			state_buffer[0] ^= state_buffer[1] ^ NORX32_CAPBYTES;
 		}
 
-		static void _encrypt_p2(array<array<UInt32>^>^ states, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, const Byte lanes, array<Byte>^% out)
+		static void _encrypt_p2(
+			array<array<UInt32>^>^ states, 
+			array<const Byte>^ in, int index, int length,
+			const _domain_separator tag, 
+			const Byte rounds, 
+			const Byte lanes, 
+			array<Byte>^% out, int outIndex)
 		{
 			// Used only for Payload of Parallelism > 1 (not P=0)
-			if (in->LongLength == 0) return;
-			Int64 outptr = 0;
+			int apparentLength = index + length;
+			if (apparentLength > in->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p2->The given index and length goes beyond the bounds of the supplied input array.");
+			if (outIndex + length > out->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p2->The given index and length goes beyond the bounds of the supplied output array.");
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
+			Int64 outptr = outIndex;
 			Byte laneptr = 0;
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
-			for (Int64 i = 0; i < in->LongLength; i += NORX32_RATEBYTES)
+			for (Int64 i = index; i < in->LongLength; i += NORX32_RATEBYTES)
 			{
 				bool last = i + NORX32_RATEBYTES >= in->LongLength;
 				_burn(state_buffer);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX32_RATEBYTES);
-					if (i < in->LongLength)
-						Buffer::BlockCopy(in, i, LastBlock, 0, in->LongLength % NORX32_RATEBYTES);
-					LastBlock[in->LongLength % NORX32_RATEBYTES] = 0x01;
+					if (i < apparentLength)
+						Buffer::BlockCopy(in, i, LastBlock, 0, apparentLength % NORX32_RATEBYTES);
+					LastBlock[apparentLength % NORX32_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, LastBlock->Length);
 				}
@@ -251,7 +282,7 @@ namespace NorxManaged
 				if (out != nullptr)
 				{
 					if (last)
-						Buffer::BlockCopy(states[laneptr], 0, out, outptr, in->LongLength % NORX32_RATEBYTES);
+						Buffer::BlockCopy(states[laneptr], 0, out, outptr, apparentLength % NORX32_RATEBYTES);
 					else
 						Buffer::BlockCopy(states[laneptr], 0, out, outptr, NORX32_RATEBYTES);
 					outptr += NORX32_RATEBYTES;
@@ -262,15 +293,27 @@ namespace NorxManaged
 			state_buffer[0] ^= state_buffer[1] ^ NORX32_CAPBYTES;
 		}
 
-		static void _decrypt_p2(array<array<UInt32>^>^ states, array<const Byte>^ in, const _domain_separator tag, const Byte rounds, const Byte lanes, int tagBytesInMessage, array<Byte>^% out)
+		static void _decrypt_p2(
+			array<array<UInt32>^>^ states, 
+			array<const Byte>^ in, int index, int length,
+			const _domain_separator tag, 
+			const Byte rounds, 
+			const Byte lanes, 
+			int tagBytesInMessage, 
+			array<Byte>^% out, int outIndex)
 		{
 			// Used only for Payload of Parallelism > 1 (not P=0)
-			if (in->LongLength == 0) return;
-			Int64 outptr = 0;
-			Int64 actualLength = in->LongLength - tagBytesInMessage;
+			int apparentLength = index + length;
+			if (apparentLength > in->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p2->The given index and length goes beyond the bounds of the supplied input array.");
+			if (outIndex + length - tagBytesInMessage > out->Length)
+				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p2->The given index and length goes beyond the bounds of the supplied output array.");
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
+			Int64 outptr = outIndex;
+			Int64 actualLength = apparentLength - tagBytesInMessage; // the tag is processed in another step
 			Byte laneptr = 0;
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
-			for (Int64 i = 0; i < actualLength; i += NORX32_RATEBYTES)
+			for (Int64 i = index; i < actualLength; i += NORX32_RATEBYTES)
 			{
 				bool last = i + NORX32_RATEBYTES >= actualLength;
 				states[laneptr][15] ^= (UInt32)tag;
