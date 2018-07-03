@@ -73,7 +73,7 @@ namespace NorxManaged
 		NorxManaged::NorxCore32::_absorb(state, Trailer, TRAILER_TAG, Rounds);
 		array<Byte>^ tempTag = gcnew array<Byte>(NORX32_TAGBYTES);
 		NorxManaged::NorxCore32::_finalize(state, (array<const UInt32>^)kt, Rounds, TagBitSize, tempTag);
-		Buffer::BlockCopy(tempTag, 0, Output, Output->Length - NORX32_TAGBYTES, NORX32_TAGBYTES);
+		Buffer::BlockCopy(tempTag, 0, Output, Length, NORX32_TAGBYTES);
 		return 0; // OK
 	}
 
@@ -141,7 +141,7 @@ namespace NorxManaged
 		NorxManaged::NorxCore32::_absorb(state, Trailer, TRAILER_TAG, Rounds);
 		array<Byte>^ temptag = gcnew array<Byte>(TagBitSize / 8);
 		array<Byte>^ inputTag = gcnew array<Byte>(TagBitSize / 8);
-		Buffer::BlockCopy(Message, Message->LongLength - (TagBitSize / 8), inputTag, 0, TagBitSize / 8);
+		Buffer::BlockCopy(Message, Length - (TagBitSize / 8), inputTag, 0, TagBitSize / 8);
 		NorxManaged::NorxCore32::_finalize(state, (array<const UInt32>^)kt, Rounds, TagBitSize, temptag);
 		if (NorxManaged::NorxCore32::norx_verify_tag((array<const Byte>^)inputTag, (array<const Byte>^)temptag) == 0)
 			return 0; // OK
@@ -193,7 +193,7 @@ namespace NorxManaged
 		NorxManaged::NorxCore32::_init(state, Nonce, (array<const UInt32>^)kt, Rounds, Parallelism, TagBitSize);
 		NorxManaged::NorxCore32::_absorb(state, Header, HEADER_TAG, Rounds);
 		if (Message != nullptr)
-			Output = gcnew array<Byte>(Message->LongLength);
+			Output = gcnew array<Byte>(Length);
 		if (Parallelism == 1)
 		{
 			NorxCore32::_encrypt_p1(state, Message, Index, Length, PAYLOAD_TAG, Rounds, Output, 0);

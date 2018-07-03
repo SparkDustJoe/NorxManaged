@@ -47,7 +47,7 @@ namespace NorxManaged
 		array<UInt64>^ state = gcnew array<UInt64>(NORX64_STATEWORDS);
 		NorxManaged::NorxCore64::_init(state, Nonce, (array<const UInt64>^)kt, Rounds, Parallelism, TagBitSize);
 		NorxManaged::NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
-		Output = gcnew array<Byte>(Message != nullptr ? Message->LongLength + NORX64_TAGBYTES : NORX64_TAGBYTES);
+		Output = gcnew array<Byte>(Message != nullptr ? Length + NORX64_TAGBYTES : NORX64_TAGBYTES);
 		if (Parallelism == 1)
 		{
 			NorxCore64::_encrypt_p1(state, Message, Index, Length, PAYLOAD_TAG_64, Rounds, Output, 0);
@@ -117,7 +117,7 @@ namespace NorxManaged
 		NorxManaged::NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
 		Output = nullptr;
 		if (Message != nullptr)
-			Output = Message->LongLength >= NORX64_TAGBYTES ? gcnew array<Byte>(Message->LongLength - NORX64_TAGBYTES) : nullptr;
+			Output = Length >= NORX64_TAGBYTES ? gcnew array<Byte>(Length - NORX64_TAGBYTES) : nullptr;
 		if (Parallelism == 1)
 		{
 			NorxCore64::_decrypt_p1(state, Message, Index, Length, PAYLOAD_TAG_64, Rounds, TagBitSize / 8, Output, 0);
@@ -143,7 +143,7 @@ namespace NorxManaged
 		NorxManaged::NorxCore64::_absorb(state, Trailer, TRAILER_TAG_64, Rounds);
 		array<Byte>^ temptag = gcnew array<Byte>(TagBitSize / 8);
 		array<Byte>^ inputTag = gcnew array<Byte>(TagBitSize / 8);
-		Buffer::BlockCopy(Message, Message->LongLength - (TagBitSize / 8), inputTag, 0, TagBitSize / 8);
+		Buffer::BlockCopy(Message, Length - (TagBitSize / 8), inputTag, 0, TagBitSize / 8);
 		NorxManaged::NorxCore64::_finalize(state, (array<const UInt64>^)kt, Rounds, TagBitSize, temptag);
 		if (NorxManaged::NorxCore64::norx_verify_tag((array<const Byte>^)inputTag, (array<const Byte>^)temptag) == 0)
 			return 0; // OK
@@ -197,7 +197,7 @@ namespace NorxManaged
 		NorxManaged::NorxCore64::_init(state, Nonce, (array<const UInt64>^)kt, Rounds, Parallelism, TagBitSize);
 		NorxManaged::NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
 		if (Message != nullptr)
-			Output = gcnew array<Byte>(Message->LongLength);
+			Output = gcnew array<Byte>(Length);
 		if (Parallelism == 1)
 		{
 			NorxCore64::_encrypt_p1(state, Message, Index, Length, PAYLOAD_TAG_64, Rounds, Output, 0);
@@ -268,7 +268,7 @@ namespace NorxManaged
 		NorxManaged::NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
 		Output = nullptr;
 		if (Message != nullptr)
-			Output = gcnew array<Byte>(Message->LongLength);
+			Output = gcnew array<Byte>(Length);
 
 		if (Parallelism == 1)
 		{
