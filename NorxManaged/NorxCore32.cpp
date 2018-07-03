@@ -1,3 +1,4 @@
+using namespace System;
 using namespace System::Runtime::InteropServices;
 
 #pragma once
@@ -143,12 +144,12 @@ namespace NorxManaged
 			array<Byte>^ out, int outIndex) // the input and output length will be the same (the TAG is added in another step)
 		{
 			// Used only for Payload of Parallelism = 1 (not P=0)
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
 			int apparentLength = index + length;
 			if (apparentLength > in->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p1->The given index and length goes beyond the bounds of the supplied input array.");
 			if (outIndex + length > out->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p1->The given index and length goes beyond the bounds of the supplied output array.");
-			if (in == nullptr || in->LongLength == 0 || length == 0) return;
 			Int64 outptr = outIndex;
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
 			for (Int64 i = index; i < apparentLength; i += NORX32_RATEBYTES)
@@ -193,12 +194,13 @@ namespace NorxManaged
 			array<Byte>^% out, int outIndex)
 		{
 			// Used only for Payload of Parallelism = 1 (not P=0)
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
 			int apparentLength = index + length;
 			if (apparentLength > in->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p1->The given index and length goes beyond the bounds of the supplied input array.");
 			if (outIndex + length - tagBytesInMessage > out->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p1->The given index and length goes beyond the bounds of the supplied output array.");
-			if (in == nullptr || in->LongLength == 0 || length == 0) return;
+
 			Int64 outptr = outIndex;
 			Int64 actualLength = apparentLength - tagBytesInMessage; // the tag is processed in another step
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
@@ -246,12 +248,12 @@ namespace NorxManaged
 			array<Byte>^% out, int outIndex)
 		{
 			// Used only for Payload of Parallelism > 1 (not P=0)
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
 			int apparentLength = index + length;
 			if (apparentLength > in->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p2->The given index and length goes beyond the bounds of the supplied input array.");
 			if (outIndex + length > out->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_encrypt_p2->The given index and length goes beyond the bounds of the supplied output array.");
-			if (in == nullptr || in->LongLength == 0 || length == 0) return;
 			Int64 outptr = outIndex;
 			Byte laneptr = 0;
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
@@ -303,12 +305,12 @@ namespace NorxManaged
 			array<Byte>^% out, int outIndex)
 		{
 			// Used only for Payload of Parallelism > 1 (not P=0)
+			if (in == nullptr || in->LongLength == 0 || length == 0) return;
 			int apparentLength = index + length;
 			if (apparentLength > in->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p2->The given index and length goes beyond the bounds of the supplied input array.");
 			if (outIndex + length - tagBytesInMessage > out->Length)
 				throw gcnew System::IndexOutOfRangeException("NorxCore32::_decrypt_p2->The given index and length goes beyond the bounds of the supplied output array.");
-			if (in == nullptr || in->LongLength == 0 || length == 0) return;
 			Int64 outptr = outIndex;
 			Int64 actualLength = apparentLength - tagBytesInMessage; // the tag is processed in another step
 			Byte laneptr = 0;
