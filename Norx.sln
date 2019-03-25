@@ -1,11 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.489
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NorxTester", "NorxTester\NorxTester.csproj", "{BD09880F-9192-4BE9-BAE4-5BFE7926C911}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NorxManaged", "NorxManaged\NorxManaged.vcxproj", "{A941B5C6-85F2-4A9F-85B4-D91D7045B519}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{22E2A968-8431-42B6-9F0E-893C06E31753}"
+	ProjectSection(SolutionItems) = preProject
+		norx retrieved 5-1-2017.pdf = norx retrieved 5-1-2017.pdf
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,5 +48,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7B90AAF9-349B-4100-B9C8-FD90BA9C3B46}
 	EndGlobalSection
 EndGlobal

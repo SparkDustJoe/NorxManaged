@@ -1,5 +1,4 @@
 using namespace System;
-using namespace System::Runtime::InteropServices;
 
 #pragma once
 
@@ -39,23 +38,27 @@ namespace NorxManaged
 }
 		//These BURN methods should survive compiler optimization, they are only used at the end of a processes
 		//Just in case, reference the source array in the calling function in some meaningful way to keep the references alive before the garbage collecter gets them
-		static __inline void _burn(array<UInt32>^ thing)
+		static void _burn(array<UInt32>^ thing)
 		{
-			for (Byte i = 0; i < thing->Length; i++)
-			{
-				thing[i] = 0;
-				if (i == 1)
-					thing[i] ^= thing[i - 1];
+			if (thing == nullptr) return;
+			try {
+				for (Byte i = 0; i < thing->Length; i++)
+				{
+					thing[i] = 0;
+				}
 			}
+			catch (...) { throw; }
 		}
-		static __inline void _burn(array<Byte>^ thing)
+		static void _burn(array<Byte>^ thing)
 		{
-			for (int i = 0; i < thing->Length; i++)
-			{
-				thing[i] = 0;
-				if (i == 1)
-					thing[i] ^= thing[i - 1];
+			if (thing == nullptr) return;
+			try {
+				for (int i = 0; i < thing->Length; i++)
+				{
+					thing[i] = 0;
+				}
 			}
+			catch (...) { throw; }
 		}
 
 		static __inline void _F(array<UInt32>^ state, const Byte rounds)
@@ -104,7 +107,11 @@ namespace NorxManaged
 			state[15] ^= k[3];
 		}
 
-		static void _absorb(array<UInt32>^ state, array<const Byte>^ in, const _domain_separator tag, const Byte rounds)
+		static void _absorb(
+			array<UInt32>^ state,
+			array<const Byte>^ in,
+			const _domain_separator_32 tag,
+			const Byte rounds)
 		{
 			// Used for P=1, and Header and Footer/Trailer (using appropriate domain separation constant)
 			if (in == nullptr || in->Length == 0) return;
@@ -112,8 +119,7 @@ namespace NorxManaged
 			array<UInt32>^ state_buffer = gcnew array<UInt32>(NORX32_RATEWORDS);
 			for (int i = 0; i < in->Length; i += NORX32_RATEBYTES)
 			{
-				bool last = i + NORX32_RATEBYTES >= in->Length;
-				if (last)
+				if (i + NORX32_RATEBYTES >= in->Length)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX32_RATEBYTES);
 					if (i < in->Length)
@@ -121,26 +127,27 @@ namespace NorxManaged
 					LastBlock[in->Length % NORX32_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX32_RATEBYTES);
+					_burn(LastBlock);
 				}
 				else
 				{
 					Buffer::BlockCopy(in, i, state_buffer, 0, NORX32_RATEBYTES);
-				}			
+				}
 				state[15] ^= (UInt32)tag;
 				_F(state, rounds);
 				for (int j = 0; j < state_buffer->Length; j++)
 				{
 					state[j] ^= state_buffer[j];
 				};
-				_burn(state_buffer);
-				state_buffer[0] ^= state_buffer[1] ^ NORX32_CAPBYTES;
 			}
+			_burn(state_buffer);
+			state_buffer[0] ^= state_buffer[1] ^ NORX32_CAPBYTES;
 		}
 
 		static void _encrypt_p1(
 			array<UInt32>^ state, 
 			array<const Byte>^ in, int index, int length,
-			const _domain_separator tag, 
+			const _domain_separator_32 tag, 
 			const Byte rounds, 
 			array<Byte>^ out, int outIndex) // the input and output length will be the same (the TAG is added in another step)
 		{
@@ -156,7 +163,6 @@ namespace NorxManaged
 			for (int i = index; i < apparentLength; i += NORX32_RATEBYTES)
 			{
 				bool last = i + NORX32_RATEBYTES >= apparentLength;
-				_burn(state_buffer);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX32_RATEBYTES);
@@ -165,6 +171,7 @@ namespace NorxManaged
 					LastBlock[apparentLength % NORX32_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX32_RATEBYTES);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -189,10 +196,11 @@ namespace NorxManaged
 		static void _decrypt_p1(
 			array<UInt32>^ state,
 			array<const Byte>^ in, int index, int length, 
-			const _domain_separator tag, 
+			const _domain_separator_32 tag, 
 			const Byte rounds, 
 			int tagBytesInMessage, 
-			array<Byte>^% out, int outIndex)
+			array<Byte>^% out, 
+			int outIndex)
 		{
 			// Used only for Payload of Parallelism = 1 (not P=0)
 			if (in == nullptr || in->Length == 0 || length == 0) return;
@@ -219,6 +227,7 @@ namespace NorxManaged
 					LastBlock[actualLength % NORX32_RATEBYTES] ^= 0x01; // remove the padding
 					LastBlock[LastBlock->Length - 1] ^= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX32_RATEBYTES);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -243,7 +252,7 @@ namespace NorxManaged
 		static void _encrypt_p2(
 			array<array<UInt32>^>^ states, 
 			array<const Byte>^ in, int index, int length,
-			const _domain_separator tag, 
+			const _domain_separator_32 tag, 
 			const Byte rounds, 
 			const Byte lanes, 
 			array<Byte>^% out, int outIndex)
@@ -261,7 +270,6 @@ namespace NorxManaged
 			for (int i = index; i < in->Length; i += NORX32_RATEBYTES)
 			{
 				bool last = i + NORX32_RATEBYTES >= in->Length;
-				_burn(state_buffer);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX32_RATEBYTES);
@@ -270,6 +278,7 @@ namespace NorxManaged
 					LastBlock[apparentLength % NORX32_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, LastBlock->Length);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -299,7 +308,7 @@ namespace NorxManaged
 		static void _decrypt_p2(
 			array<array<UInt32>^>^ states, 
 			array<const Byte>^ in, int index, int length,
-			const _domain_separator tag, 
+			const _domain_separator_32 tag, 
 			const Byte rounds, 
 			const Byte lanes, 
 			int tagBytesInMessage, 
@@ -330,6 +339,7 @@ namespace NorxManaged
 					LastBlock[actualLength % NORX32_RATEBYTES] ^= 0x01;
 					LastBlock[LastBlock->Length - 1] ^= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, LastBlock->Length);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -353,20 +363,20 @@ namespace NorxManaged
 			state_buffer[0] ^= state_buffer[1] ^ NORX32_CAPBYTES;
 		}
 
-		static __inline void _branch(array<UInt32>^ state, Byte lane, const Byte rounds)
-		{
-			state[15] ^= BRANCH_TAG;
-			_F(state, rounds);
-			// Inject lane ID 
-			for (Byte i = 0; i < NORX32_RATEWORDS; ++i) {
-				state[i] ^= lane;
-			}
-		}
+		//static __inline void _branch(array<UInt32>^ state, Byte lane, const Byte rounds)
+		//{
+		//	state[15] ^= _domain_separator_32::BRANCH_TAG_32;
+		//	_F(state, rounds);
+		//	// Inject lane ID 
+		//	for (Byte i = 0; i < NORX32_RATEWORDS; ++i) {
+		//		state[i] ^= lane;
+		//	}
+		//}
 
 		// stateA ^= stateB, then destroy stateB
 		static __inline void _merge(array<UInt32>^ stateA, array<UInt32>^ stateB, const Byte rounds)
 		{
-			stateB[15] ^= MERGE_TAG;
+			stateB[15] ^= _domain_separator_32::MERGE_TAG_32;
 			_F(stateB, rounds);
 			for (Byte i = 0; i < 16; ++i) {
 				stateA[i] ^= stateB[i];
@@ -376,7 +386,7 @@ namespace NorxManaged
 
 		static __inline void _finalize(array<UInt32>^ state, array<const UInt32>^ k, const Byte rounds, const short tagsizebits, array<Byte>^% outTag)
 		{
-			state[15] ^= FINAL_TAG;
+			state[15] ^= _domain_separator_32::FINAL_TAG_32;
 
 			_F(state, rounds);
 			state[12] ^= k[0];
@@ -392,17 +402,6 @@ namespace NorxManaged
 			Buffer::BlockCopy(state, NORX32_RATEWORDS * NORX32_WORDBYTES, outTag, 0, tagsizebits / 8); // extract Tag
 			_burn(state); // at this point we can burn the state 
 			state[0] ^= state[state[15] % 7] ^ NORX32_CAPBYTES; // prevent compiler optimizations?
-		}
-
-		// Verify tags in constant time: 0 for success, -1 for fail 
-		int norx_verify_tag(array<const Byte>^ tag1, array<const Byte>^ tag2)
-		{
-			unsigned acc = 0;
-			for (Byte i = 0; i < NORX32_TAGBYTES; ++i) {
-				acc |= tag1[i] ^ tag2[i];
-			}
-
-			return (((acc - 1) >> 8) & 1) - 1;
 		}
 	}
 }

@@ -41,6 +41,16 @@ namespace NorxManaged
 
 	public ref class Norx64
 	{
+	internal:
+		static int norx_verify_tag64(array<const Byte>^ tag1, array<const Byte>^ tag2)
+		{
+			unsigned acc = 0;
+			if (tag1->Length != tag2->Length) acc = 0xF0;
+			for (Byte i = 0; i < tag1->Length; ++i) {
+				acc |= tag1[i] ^ tag2[i];
+			}
+			return (((acc - 1) >> 8) & 1) - 1;
+		}
 	public:
 		static int Encrypt(
 			array<const Byte>^ Header,
@@ -145,6 +155,4 @@ namespace NorxManaged
 	};
 }
 
-//#include "norx_config.h"
-
-#endif // NORX_NORX_H
+#endif // NORX_NORX_64H

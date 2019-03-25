@@ -204,7 +204,8 @@
     <ClCompile Include="AssemblyInfo.cpp" />
     <ClCompile Include="NorxManaged32.cpp" />
     <ClCompile Include="NorxManaged64.cpp" />
-    <ClCompile Include="NorxManagedStreams.cpp" />
+    <ClCompile Include="NorxManagedStreams32.cpp" />
+    <ClCompile Include="NorxManagedStreams64.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />

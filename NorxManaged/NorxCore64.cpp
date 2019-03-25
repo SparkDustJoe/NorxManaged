@@ -39,23 +39,27 @@ namespace NorxManaged
 }
 		//These BURN methods should survive compiler optimization, they are only used at the end of a process
 		//Just in case, reference the source array in the calling function in some meaningful way to keep the references alive before the garbage collecter gets them
-		static __inline void _burn(array<UInt64>^ thing)
+		static void _burn(array<UInt64>^ thing)
 		{
-			for (Byte i = 0; i < thing->Length; i++)
-			{
-				thing[i] = 0;
-				if (i == 1)
-					thing[i] ^= thing[i - 1];
+			if (thing == nullptr) return;
+			try {
+				for (Byte i = 0; i < thing->Length; i++)
+				{
+					thing[i] = 0;
+				}
 			}
+			catch (...) { throw; }
 		}
-		static __inline void _burn(array<Byte>^ thing)
+		static void _burn(array<Byte>^ thing)
 		{
-			for (int i = 0; i < thing->Length; i++)
-			{
-				thing[i] = 0;
-				if (i == 1)
-					thing[i] ^= thing[i - 1];
+			if (thing == nullptr) return;
+			try {
+				for (int i = 0; i < thing->Length; i++)
+				{
+					thing[i] = 0;
+				}
 			}
+			catch (...) { throw; }
 		}
 
 		static __inline void _F(array<UInt64>^ state, const Byte rounds)
@@ -121,6 +125,7 @@ namespace NorxManaged
 					LastBlock[in->Length % NORX64_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX64_RATEBYTES);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -132,9 +137,9 @@ namespace NorxManaged
 				{
 					state[j] ^= state_buffer[j];
 				};
-				_burn(state_buffer);
-				state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 			}
+			_burn(state_buffer);
+			state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 		}
 
 		static void _encrypt_p1(
@@ -156,7 +161,6 @@ namespace NorxManaged
 			for (int i = index; i < apparentLength; i += NORX64_RATEBYTES)
 			{
 				bool last = i + NORX64_RATEBYTES >= apparentLength;
-				_burn(state_buffer);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX64_RATEBYTES);
@@ -165,6 +169,7 @@ namespace NorxManaged
 					LastBlock[apparentLength % NORX64_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX64_RATEBYTES);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -218,6 +223,7 @@ namespace NorxManaged
 					LastBlock[actualLength % NORX64_RATEBYTES] ^= 0x01; // remove the padding
 					LastBlock[LastBlock->Length - 1] ^= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, NORX64_RATEBYTES);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -260,7 +266,6 @@ namespace NorxManaged
 			for (int i = index; i < apparentLength; i += NORX64_RATEBYTES)
 			{
 				bool last = i + NORX64_RATEBYTES >= in->Length;
-				_burn(state_buffer);
 				if (last)
 				{
 					array<Byte>^ LastBlock = gcnew array<Byte>(NORX64_RATEBYTES);
@@ -269,6 +274,7 @@ namespace NorxManaged
 					LastBlock[in->Length % NORX64_RATEBYTES] = 0x01;
 					LastBlock[LastBlock->Length - 1] |= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, LastBlock->Length);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -330,6 +336,7 @@ namespace NorxManaged
 					LastBlock[actualLength % NORX64_RATEBYTES] ^= 0x01;
 					LastBlock[LastBlock->Length - 1] ^= 0x80;
 					Buffer::BlockCopy(LastBlock, 0, state_buffer, 0, LastBlock->Length);
+					_burn(LastBlock);
 				}
 				else
 				{
@@ -353,24 +360,24 @@ namespace NorxManaged
 			state_buffer[0] ^= state_buffer[1] ^ NORX64_CAPBYTES;
 		}
 
-		static __inline void _branch(array<UInt64>^ state, Byte lane, const Byte rounds)
-		{
-			state[15] ^= BRANCH_TAG_64;
-			_F(state, rounds);
-			// Inject lane ID 
-			for (Byte i = 0; i < NORX64_RATEWORDS; ++i) {
-				state[i] ^= lane;
-			}
-		}
+		//static __inline void _branch(array<UInt64>^ state, Byte lane, const Byte rounds)
+		//{
+		//	state[15] ^= BRANCH_TAG_64;
+		//	_F(state, rounds);
+		//	// Inject lane ID 
+		//	for (Byte i = 0; i < NORX64_RATEWORDS; ++i) {
+		//		state[i] ^= lane;
+		//	}
+		//}
 
-		// stateA ^= stateB, then destroy stateB
-		static __inline void _merge(array<UInt64>^ stateA, array<UInt64>^ stateB, const Byte rounds)
+		// stateDest ^= (processed)stateSource, then overwrite stateSource
+		static __inline void _merge(array<UInt64>^ stateDest, array<UInt64>^ stateSource, const Byte rounds)
 		{
-			stateB[15] ^= MERGE_TAG_64;
-			_F(stateB, rounds);
+			stateSource[15] ^= MERGE_TAG_64;
+			_F(stateSource, rounds);
 			for (Byte i = 0; i < 16; ++i) {
-				stateA[i] ^= stateB[i];
-				stateB[i] |= UInt64::MaxValue; // destroy contents of old state
+				stateDest[i] ^= stateSource[i];
+				stateSource[i] |= UInt64::MaxValue; // destroy contents of old state
 			}
 		}
 
@@ -392,17 +399,6 @@ namespace NorxManaged
 			Buffer::BlockCopy(state, NORX64_RATEWORDS * NORX64_WORDBYTES, outTag, 0, tagsizebits / 8); // extract Tag
 			_burn(state); // at this point we can burn the state 
 			state[0] ^= state[state[15] % 7] ^ NORX64_CAPBYTES; // prevent compiler optimizations?
-		}
-
-		// Verify tags in constant time: 0 for success, -1 for fail 
-		int norx_verify_tag(array<const Byte>^ tag1, array<const Byte>^ tag2)
-		{
-			unsigned acc = 0;
-			for (Byte i = 0; i < NORX64_TAGBYTES; ++i) {
-				acc |= tag1[i] ^ tag2[i];
-			}
-
-			return (((acc - 1) >> 8) & 1) - 1;
 		}
 	}
 }

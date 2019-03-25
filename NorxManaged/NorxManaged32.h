@@ -6,7 +6,7 @@
 *      - Samuel Neves <sneves@dei.uc.pt>
 *      - Philipp Jovanovic <philipp@jovanovic.io>
 *
-* Modified 2017 by:
+* Modified 2017-2019 by:
 *      - Dustin Sparks <sparkdustjoe@gmail.com>
 *
 * To the extent possible under law, the author(s) have dedicated all copyright
@@ -29,18 +29,28 @@ using namespace System::Runtime::InteropServices;
 
 namespace NorxManaged
 {
-	typedef enum _domain_separator : Byte
+	typedef enum _domain_separator_32 : Byte
 	{
-		HEADER_TAG = 0x01,
-		PAYLOAD_TAG = 0x02,
-		TRAILER_TAG = 0x04,
-		FINAL_TAG = 0x08,
-		BRANCH_TAG = 0x10,
-		MERGE_TAG = 0x20
-	} _domain_separator;
+		HEADER_TAG_32 = 0x01,
+		PAYLOAD_TAG_32 = 0x02,
+		TRAILER_TAG_32 = 0x04,
+		FINAL_TAG_32 = 0x08,
+		BRANCH_TAG_32 = 0x10,
+		MERGE_TAG_32 = 0x20
+	} _domain_separator_32;
 
 	public ref class Norx32
 	{
+	internal:
+		static int norx_verify_tag32(array<const Byte>^ tag1, array<const Byte>^ tag2)
+		{
+			unsigned acc = 0;
+			if (tag1->Length != tag2->Length) acc = 0xF0;
+			for (Byte i = 0; i < tag1->Length; ++i) {
+				acc |= tag1[i] ^ tag2[i];
+			}
+			return (((acc - 1) >> 8) & 1) - 1;
+		}
 	public:
 		static int Encrypt(
 			array<const Byte>^ Header,
@@ -146,6 +156,4 @@ namespace NorxManaged
 	};
 }
 
-//#include "norx_config.h"
-
-#endif // NORX_NORX_H
+#endif // NORX_NORX_32H

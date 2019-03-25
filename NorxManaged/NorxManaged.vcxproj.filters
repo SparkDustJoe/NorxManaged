@@ -29,13 +29,16 @@
     <ClCompile Include="AssemblyInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NorxManagedStreams.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="NorxManaged64.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NorxManaged32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NorxManagedStreams32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NorxManagedStreams64.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
