@@ -81,9 +81,12 @@ namespace NorxManaged
 		}
 
 		// Low-level operations 
-		static __inline void _init(array<UInt64>^ state, array<const Byte>^ n, array<const UInt64>^ k, 
+		static __inline array<UInt64>^ _init(array<const Byte>^ n, array<const UInt64>^ k, 
 			Byte rounds, Byte lanes, short tagSizeBits)
 		{
+			array<UInt64>^ state;
+#ifndef USE_COMPUTED_CONSTANTS
+			state = gcnew array<UInt64>(NORX64_STATEWORDS);
 			if (n != nullptr)  // nonce is optional, so check for null
 				Buffer::BlockCopy(n, 0, state, 0, NORX64_NONCEBYTES);
 			Buffer::BlockCopy(k, 0, state, NORX64_NONCEBYTES, NORX64_KEYBYTES);
@@ -99,13 +102,27 @@ namespace NorxManaged
 			state[13] = 0xB980C852479FAFBDUL ^ (UInt64)rounds;
 			state[14] = 0xDA24516BF55EAFD4UL ^ (UInt64)lanes;
 			state[15] = 0x86026AE8536F1501UL ^ (UInt64)tagSizeBits;
-
+#else
+			state = gcnew array<UInt64>{
+				0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+			};
+			_F(state, 2);
+			if (n != nullptr)  // nonce is optional, so check for null
+				Buffer::BlockCopy(n, 0, state, 0, NORX64_NONCEBYTES);
+			Buffer::BlockCopy(k, 0, state, NORX64_NONCEBYTES, NORX64_KEYBYTES);
+			state[12] ^= 64UL;
+			state[13] ^= (UInt64)rounds;
+			state[14] ^= (UInt64)lanes;
+			state[15] ^= (UInt64)tagSizeBits;
+#endif
 			_F(state, rounds);
 
 			state[12] ^= k[0];
 			state[13] ^= k[1];
 			state[14] ^= k[2];
 			state[15] ^= k[3];
+			
+			return state;
 		}
 
 		static void _absorb(array<UInt64>^ state, array<const Byte>^ in, const _domain_separator_64 tag, const Byte rounds)

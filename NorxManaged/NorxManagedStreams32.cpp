@@ -49,8 +49,7 @@ namespace NorxManaged
 		array<const UInt32>^ kt = reinterpret_cast<array<const UInt32>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt32>^ kt = gcnew array<UInt32>(NORX32_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX32_KEYBYTES);
-		array<UInt32>^ state = gcnew array<UInt32>(NORX32_STATEWORDS);
-		NorxManaged::NorxCore32::_init(state, Nonce, kt, Rounds, Parallelism, TagBitSize);
+		array<UInt32>^ state = NorxManaged::NorxCore32::_init(Nonce, kt, Rounds, Parallelism, TagBitSize);
 		NorxManaged::NorxCore32::_absorb(state, Header, HEADER_TAG_32, Rounds);
 		//Output = gcnew array<Byte>(Message != nullptr ? Message->Length + NORX32_TAGBYTES : NORX32_TAGBYTES);
 		if (Parallelism == 1)
@@ -115,8 +114,7 @@ namespace NorxManaged
 		array<const UInt32>^ kt = reinterpret_cast<array<const UInt32>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt32>^ kt = gcnew array<UInt32>(NORX32_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX32_KEYBYTES);
-		array<UInt32>^ state = gcnew array<UInt32>(NORX32_STATEWORDS);
-		NorxManaged::NorxCore32::_init(state, Nonce, kt, Rounds, Parallelism, TagBitSize);
+		array<UInt32>^ state = NorxManaged::NorxCore32::_init(Nonce, kt, Rounds, Parallelism, TagBitSize);
 		NorxManaged::NorxCore32::_absorb(state, Header, HEADER_TAG_32, Rounds);
 		//Output = nullptr;
 		//if (Message != nullptr)
@@ -204,8 +202,7 @@ namespace NorxManaged
 		array<const UInt32>^ kt = reinterpret_cast<array<const UInt32>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt32>^ kt = gcnew array<UInt32>(NORX32_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX32_KEYBYTES);
-		array<UInt32>^ state = gcnew array<UInt32>(NORX32_STATEWORDS);
-		NorxManaged::NorxCore32::_init(state, Nonce, kt, Rounds, Parallelism, TagBitSize);
+		array<UInt32>^ state = NorxManaged::NorxCore32::_init(Nonce, kt, Rounds, Parallelism, TagBitSize);
 		NorxManaged::NorxCore32::_absorb(state, Header, HEADER_TAG_32, Rounds);
 		//if (Message != nullptr)
 		//	Output = gcnew array<Byte>(Message->Length);
@@ -269,8 +266,7 @@ namespace NorxManaged
 		array<const UInt32>^ kt = reinterpret_cast<array<const UInt32>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt32>^ kt = gcnew array<UInt32>(NORX32_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX32_KEYBYTES);
-		array<UInt32>^ state = gcnew array<UInt32>(NORX32_STATEWORDS);
-		NorxManaged::NorxCore32::_init(state, Nonce, kt, Rounds, Parallelism, Tag->Length * 8);
+		array<UInt32>^ state = NorxManaged::NorxCore32::_init(Nonce, kt, Rounds, Parallelism, Tag->Length * 8);
 		NorxManaged::NorxCore32::_absorb(state, Header, HEADER_TAG_32, Rounds);
 		//Output = nullptr;
 		//if (Message != nullptr)

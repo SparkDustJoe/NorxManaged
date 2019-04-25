@@ -17,6 +17,8 @@
 * this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 
+#pragma once
+
 #include "NorxManaged64.h"
 #include "NorxCore64.cpp"
 
@@ -47,8 +49,7 @@ namespace NorxManaged
 		array<const UInt64>^ kt = reinterpret_cast<array<const UInt64>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt64>^ kt = gcnew array<UInt64>(NORX64_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX64_KEYBYTES);
-		array<UInt64>^ state = gcnew array<UInt64>(NORX64_STATEWORDS);
-		NorxCore64::_init(state, Nonce, kt, Rounds, Parallelism, TagBitSize);
+		array<UInt64>^ state = NorxCore64::_init(Nonce, kt, Rounds, Parallelism, TagBitSize);
 		NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
 		Output = gcnew array<Byte>(Message != nullptr ? Length + NORX64_TAGBYTES : NORX64_TAGBYTES);
 		if (Parallelism == 1)
@@ -125,8 +126,7 @@ namespace NorxManaged
 		array<const UInt64>^ kt = reinterpret_cast<array<const UInt64>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt64>^ kt = gcnew array<UInt64>(NORX64_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX64_KEYBYTES);
-		array<UInt64>^ state = gcnew array<UInt64>(NORX64_STATEWORDS);
-		NorxCore64::_init(state, Nonce, kt, Rounds, Parallelism, TagBitSize);
+		array<UInt64>^ state = NorxCore64::_init(Nonce, kt, Rounds, Parallelism, TagBitSize);
 		NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
 		Output = nullptr;
 		if (Message != nullptr)
@@ -218,8 +218,7 @@ namespace NorxManaged
 		array<const UInt64>^ kt = reinterpret_cast<array<const UInt64>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt64>^ kt = gcnew array<UInt64>(NORX64_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX64_KEYBYTES);
-		array<UInt64>^ state = gcnew array<UInt64>(NORX64_STATEWORDS);
-		NorxCore64::_init(state, Nonce, kt, Rounds, Parallelism, TagBitSize);
+		array<UInt64>^ state = NorxCore64::_init(Nonce, kt, Rounds, Parallelism, TagBitSize);
 		NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
 		if (Message != nullptr)
 			Output = gcnew array<Byte>(Length);
@@ -296,8 +295,7 @@ namespace NorxManaged
 		array<const UInt64>^ kt = reinterpret_cast<array<const UInt64>^>(Key); // prevent unneccessary memory copying of the key!
 		//array<UInt64>^ kt = gcnew array<UInt64>(NORX64_KEYWORDS);
 		//Buffer::BlockCopy(Key, 0, kt, 0, NORX64_KEYBYTES);
-		array<UInt64>^ state = gcnew array<UInt64>(NORX64_STATEWORDS);
-		NorxCore64::_init(state, Nonce, kt, Rounds, Parallelism, Tag->Length * 8);
+		array<UInt64>^ state = NorxCore64::_init(Nonce, kt, Rounds, Parallelism, Tag->Length * 8);
 		NorxCore64::_absorb(state, Header, HEADER_TAG_64, Rounds);
 		Output = nullptr;
 		if (Message != nullptr)
